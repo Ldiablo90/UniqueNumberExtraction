@@ -31,10 +31,12 @@ def todayFileok(originList, lastNum, dataFilePath, productType, needColumns, use
     dataPd = pd.read_excel(dataFilePath) # 현 시간 최신데이터 파일 가져오기
     if(productType):
         print("프리미엄 검사...")
-        dataPd = dataPd[dataPd["상품명"].str.contains("프리미엄")].sort_values(by=["수량"],ascending=False) # 배송파일 프리미엄 구분 / 수량으로 정렬
+        dataPd = compositepackaging(dataPd, "프리미엄")
+        # dataPd = dataPd[dataPd["상품명"].str.contains("프리미엄")].sort_values(by=["수량"],ascending=False) # 배송파일 프리미엄 구분 / 수량으로 정렬
     else:
         print("일반형 검사...")
-        dataPd = dataPd[dataPd["상품명"].str.contains("투명 와이드")].sort_values(by=["수량"],ascending=False) # 배송파일 일반형 구분 / 수량으로 정렬
+        dataPd = compositepackaging(dataPd, "투명 와이드")
+        # dataPd = dataPd[dataPd["상품명"].str.contains("투명 와이드")].sort_values(by=["수량"],ascending=False) # 배송파일 일반형 구분 / 수량으로 정렬
     
     dataList = (dataPd[needColumns].values) # 배송파일 필요한 정보만 남기기
     for orderNumber in dataList:
@@ -58,3 +60,24 @@ def todayFileno():
 def todayFileFilter(x:str):
     today = "%s"%dt.date.today()
     return today in x
+
+def compositepackaging(dataPd:pd.DataFrame, types:str):
+    filterPd = dataPd[dataPd["상품명"].str.contains(types)]
+    userselect = list(set(filterPd["주문번호"].values))
+    dataColume = filterPd.columns
+    tempPd = pd.DataFrame([],columns=dataColume)
+    filterPd = filterPd.astype({"수량":str})
+    for user in userselect:
+        subtemp = filterPd[filterPd["주문번호"] == user].copy()
+        quntity = eval("+".join(subtemp["수량"].values))
+        mask = [True for _ in range(len(subtemp))]
+        allquantity = pd.DataFrame([quntity for _ in range(len(subtemp))], columns=["총량"], index=subtemp.index)
+        subtemp = pd.concat([subtemp, allquantity], axis=1)
+        if quntity < 7 and len(subtemp) > 1:
+            subtemp.loc[mask,"옵션정보"] = ", ".join(subtemp["옵션정보"].values)
+            subtemp.loc[mask,"수량"] = ", ".join(subtemp["수량"].values)
+            tempPd = pd.concat([tempPd,subtemp.iloc[[0],:]])
+        else:
+            tempPd = pd.concat([tempPd,subtemp])
+    tempPd = tempPd.sort_values(by=["수량"],ascending=False)
+    return tempPd
