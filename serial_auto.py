@@ -10,7 +10,7 @@ original_working_directory = os.getcwd()
 
 networkpath = r"\\Desktop-sl150kj\송장파일"
 
-mainfiles = ["슈케이브통합시리얼이벤트_val_1.xlsx","슈케이브통합시리얼이벤트_val_1.xlsx"]
+serialFile = "NEW_시리얼이벤트_season01_ea.xlsx"
 
 meridiem = "오전" if dt.datetime.now().hour < 14 else "오후" # if 오전 else 오후
 
@@ -24,18 +24,20 @@ files = os.listdir(networkpath)
 
 if len(files) > 0:
     print("공유파일에 접속하였습니다.")
+    # todaylastfile = '스마트스토어_오후_2022-12-12.xlsx'
     todaylastfile = list(filter(sfunc.todayFileFilter, files))[-1]
     dataFilePath = r"%s\%s"%(networkpath,todaylastfile)
     if os.path.isfile(dataFilePath):
-        print("오늘의 정보를 찾았습니다.\n%s"%todaylastfile)
+        print("오늘의 정보를 찾았습니다. : %s"%todaylastfile)
         productType = True
-        for serialFile in mainfiles:
+        for _ in range(2):
+            # dataSheetName = "{}-{}-{}".format('2022-12-12','오후', "프" if productType else "베")  # 현 시간 최신데이터 시트 이름 
             dataSheetName = "{}-{}-{}".format(dt.date.today(),meridiem, "프" if productType else "베")  # 현 시간 최신데이터 시트 이름
             mainFilePath = r"%s\%s"%(original_working_directory,serialFile)
             originPd, loadData = sfunc.mainFileok(mainFilePath,mainSheetName) if os.path.isfile(mainFilePath) else sfunc.mainFileno(useColumns) # 메인파일이 있는지 확인 후 파일 읽기
             originList = originPd["시리얼번호"].values # 시리얼번호 모두 가져오기
             lastNum = len(originList)+1 # 시리얼번호 길이
-            dataPd = sfunc.todayFileok(originList,lastNum, dataFilePath, productType, needColumns, useColumns) if os.path.isfile(dataFilePath) else sfunc.todayFileno(useColumns)
+            dataPd = sfunc.todayByIndividual(originList,lastNum, dataFilePath, productType, needColumns, useColumns) if os.path.isfile(dataFilePath) else pd.DataFrame() 
             if not dataPd.empty:
                 writer = pd.ExcelWriter(mainFilePath,engine="openpyxl")
                 for sheetname in loadData.sheetnames:
